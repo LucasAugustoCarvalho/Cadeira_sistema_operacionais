@@ -1,0 +1,5 @@
+mkdir /sistema
+mkdir /sistema/logs
+create /sistema/logs/app.log --size 10KB
+tree
+fs_status --details
