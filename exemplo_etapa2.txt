@@ -1,0 +1,14 @@
+mkdir /sistema
+mkdir /sistema/logs
+write_file /sistema/logs/app.log "Novo Registro"
+create /sistema/logs/grande.log --size 10KB
+tree
+fs_status --details
+io_queue
+io_run SSTF
+schedule_demo SSTF 53 98 183 37 122 14
+raid_status
+raid_fail 2
+raid_read 1
+raid_rebuild 2
+raid_status
