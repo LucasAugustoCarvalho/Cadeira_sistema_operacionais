@@ -98,3 +98,75 @@ help
 - A imagem RAID armazena o conteúdo lógico dos blocos de dados; blocos de metadados e livres são representados por zeros. O comando `raid_status` lista a localização dos blocos e a paridade. Gravações em modo degradado são bloqueadas nesta versão para manter o exemplo simples.
 
 **Limitações:** este é um simulador educacional, não um sistema de arquivos real. Os tempos de seek, a durabilidade física de SSDs, a sincronização persistente entre processos e a tolerância a falhas reais não são modelados. A fila representa solicitações geradas por operações, não paralelismo de hardware. O arquivo JSON da Etapa 1 salva a árvore e o mapa lógico, mas não persiste o estado de falhas RAID nem a contagem de desgaste do SSD.
+
+---
+
+# Etapa 3 — Segurança, identidade, ACL, criptografia e antivírus simulado
+
+## Instalação e execução
+
+Python 3.10+:
+
+```bash
+python -m pip install -r requirements.txt
+python etapa3.py
+```
+
+Defina a senha de root no prompt inicial. O simulador inicia **sem sessão autenticada**. Faça `login --user root` e informe a senha no prompt oculto. Para testar com um script didático (senhas de demonstração, não use senhas reais):
+
+```bash
+# Linux/macOS
+SIM_ROOT_PASSWORD=demo-root python etapa3.py --script exemplo_etapa3.txt
+# PowerShell
+$env:SIM_ROOT_PASSWORD="demo-root"; python etapa3.py --script exemplo_etapa3.txt
+```
+
+## Comandos novos
+
+```text
+login --user root
+logout
+whoami
+groupadd devs
+useradd carlos --group devs
+usermod carlos --group admin
+passwd carlos
+chmod 750 /sistema/config.sys
+chown root:admin /sistema/config.sys
+ls_acl /sistema/config.sys
+encrypt_file /home/carlos/segredo.txt
+read_file /home/carlos/segredo.txt --key MinhaChave123
+decrypt_file /home/carlos/segredo.txt
+antivirus_scan /
+antivirus_scan / --key MinhaChave123
+tamper_block 3
+audit_log
+```
+
+**Importante:** `--password` e `--key` expõem segredos no histórico do shell e nos arquivos de script. Prefira os prompts ocultos para operações interativas. Não versionar senhas reais.
+
+### Regras de segurança
+
+- **Modo Usuário:** usuários autenticados não-root; criação e leitura condicionadas às permissões POSIX `rwx` de proprietário/grupo/outros. É necessário `x` para atravessar diretórios e `wx` no pai para criar/remover arquivos.
+- **Modo Kernel:** sessão autenticada como root; permite gerenciar usuários/grupos, alterar proprietário, compactar, simular falhas e adulterações e executar auditoria. Não é o kernel real do sistema operacional.
+- **Senhas:** PBKDF2-HMAC-SHA256 com sal aleatório e 310.000 iterações; comparação em tempo constante. A senha não é armazenada em texto puro.
+- **Criptografia:** AES-256-GCM autenticado, chave derivada de senha com scrypt e sal aleatório; nonce aleatório por arquivo. Conteúdo criptografado (base64) é o conteúdo efetivamente passado à camada de blocos e RAID. Somente arquivos com texto materializado podem ser criptografados; arquivos criados apenas com `--size` são reservas simuladas.
+- **Integridade:** hashes SHA-256 dos blocos lidos do RAID são comparados com o baseline confiável da sessão. Assinaturas didáticas `SIMULATED_MALWARE` e `EICAR-STANDARD-ANTIVIRUS-TEST-FILE` são procuradas em arquivos legíveis; conteúdo criptografado só pode ser inspecionado se uma chave for fornecida. O comando `tamper_block` altera diretamente um bloco do RAID sem atualizar o baseline, simulando adulteração.
+- **Auditoria:** operações negadas e eventos críticos registrados em memória. Logs não incluem senhas ou chaves.
+
+### Limitações didáticas
+
+- Usuários, ACL, baseline e logs permanecem **somente em memória** durante a execução. `save`/`load` estão desabilitados na Etapa 3 para evitar salvar um disco sem metadados de segurança.
+- O modelo é de **bits POSIX rwx**, não ACLs estendidas com regras por usuário.
+- Os hashes de referência ficam em memória, não em armazenamento externo imutável; não resistem a um atacante com controle total do processo Python.
+- A varredura não é antivírus real e não substitui ferramentas de proteção.
+- O texto cifrado é representado por base64 no sistema de arquivos, com overhead de armazenamento; os dados cifrados são gravados na simulação RAID.
+- Não use este simulador para armazenar dados sensíveis de produção.
+
+## Testes
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+O conjunto inclui testes das três etapas: arquivos, E/S/RAID e segurança.

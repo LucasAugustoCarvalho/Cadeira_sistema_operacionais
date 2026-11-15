@@ -1,0 +1,27 @@
+# Exemplo de demonstração. SIM_ROOT_PASSWORD deve ser definido no ambiente.
+# Senhas aqui são APENAS demonstração; não use senhas reais em scripts.
+login --user root --password demo-root
+mkdir /sistema
+write_file /sistema/config.sys "Configuracao do sistema"
+chmod 750 /sistema/config.sys
+groupadd devs
+useradd carlos --group devs --password demo-carlos
+logout
+login --user carlos --password demo-carlos
+read_file /sistema/config.sys
+logout
+login --user root --password demo-root
+mkdir /home
+chmod 777 /home
+logout
+login --user carlos --password demo-carlos
+mkdir /home/carlos
+write_file /home/carlos/segredo.txt "Mensagem secreta"
+encrypt_file /home/carlos/segredo.txt --key MinhaChave123
+read_file /home/carlos/segredo.txt --key MinhaChave123
+logout
+login --user root --password demo-root
+antivirus_scan /
+tamper_block 3
+antivirus_scan /
+audit_log
