@@ -170,3 +170,46 @@ python -m unittest discover -s tests -v
 ```
 
 O conjunto inclui testes das três etapas: arquivos, E/S/RAID e segurança.
+
+---
+
+## Etapa 4 — Gerenciamento de memória híbrida
+
+O executável `etapa4.py` preserva os comandos das Etapas 1, 2 e 3 e acrescenta memória RAM simulada.
+
+### Executar
+
+```bash
+pip install -r requirements.txt
+python etapa4.py
+python etapa4.py --script exemplo_etapa4.txt
+python etapa4.py --dynamic-kb 8 --page-kb 4 --replacement SECOND_CHANCE
+python -m unittest discover -s tests -v
+```
+
+A senha inicial de root é solicitada no terminal. Para executar scripts de exemplo sem prompts, configure a variável de ambiente `SIM_ROOT_PASSWORD` e use a mesma senha no comando `login` do script. **Não publique senhas reais**.
+
+### Comandos de memória
+
+```text
+create_process --name Kernel_DiskDriver --size 512KB --type critical
+create_process --name App_Navegador --size 10KB --type normal
+terminate_process --name Kernel_DiskDriver
+memory_status --reserved
+memory_status --virtual
+memory_status
+memory_compact --reserved
+translate_address --process App_Navegador --page 1
+execute_step --process App_Navegador --instruction "LOAD_DATA Página 2"
+memory_algorithm LRU
+memory_algorithm SECOND_CHANCE
+```
+
+- Região reservada: 4 MB, dos quais 1 MB para o núcleo base; alocação contígua de processos críticos; compactação controlada por root.
+- Região dinâmica: 64 KB por padrão, molduras de 4 KB, páginas sob demanda. Ajuste as capacidades na linha de comando.
+- O endereço físico exibido é um offset na RAM simulada, após a região reservada.
+- Fragmentação interna: bytes inutilizados na última página lógica do processo; fragmentação externa: soma das lacunas livres fora da maior lacuna contígua da região reservada.
+- `LRU` escolhe a página residente menos recentemente utilizada; `SECOND_CHANCE` usa bits de referência e ponteiro circular.
+- `SWAP_IN` e `SWAP_OUT` são eventos didáticos registrados na fila de E/S integrada da Etapa 2; não são gravados bytes de memória reais em um arquivo de swap persistente. A política não simula páginas sujas ou tempos reais.
+- A tabela de páginas é criada sem reservar molduras; a primeira referência gera um page fault. O estado é mantido em memória enquanto o programa estiver em execução.
+- Comandos críticos de memória exigem login root. Os demais comandos seguem a política de autenticação da Etapa 3.

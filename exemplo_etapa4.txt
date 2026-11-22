@@ -1,0 +1,18 @@
+# Defina SIM_ROOT_PASSWORD=demo123 para executar este exemplo.
+login --user root --password demo123
+mkdir /sistema
+write_file /sistema/log.txt "Registro do simulador"
+read_file /sistema/log.txt
+create_process --name Kernel_DiskDriver --size 512KB --type critical
+create_process --name Kernel_NetDriver --size 1024KB --type critical
+create_process --name Kernel_CryptoEngine --size 512KB --type critical
+terminate_process --name Kernel_NetDriver
+memory_status --reserved
+memory_compact --reserved
+memory_status --reserved
+create_process --name App_Navegador --size 10KB --type normal
+translate_address --process App_Navegador --page 0
+translate_address --process App_Navegador --page 1
+execute_step --process App_Navegador --instruction "LOAD_DATA Página 2"
+memory_status --virtual
+io_queue
